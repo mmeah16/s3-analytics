@@ -23,7 +23,7 @@ func main() {
 	dynamoDBClient := aws.NewDynamoDBClient(ctx, config.TableName)
 	dynamoDBService := services.NewDynamoDBService(dynamoDBClient)
 
-	uploadHandler := handlers.NewUploadHandler(s3Service)
+	uploadHandler := handlers.NewUploadHandler(s3Service, dynamoDBService)
 	filesHander := handlers.NewFilesHandler(dynamoDBService)
 
 	server := gin.Default()
