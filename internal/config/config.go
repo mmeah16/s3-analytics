@@ -11,6 +11,7 @@ import (
 
 type Config struct {
 	Bucket string
+	TableName string
 }
 
 func LoadConfig() *Config {
@@ -21,11 +22,18 @@ func LoadConfig() *Config {
 	}
 
 	bucket := os.Getenv("BUCKET")
+	tableName := os.Getenv("TABLE_NAME")
 
 	if bucket == "" {
 		log.Fatal("Could not retrieve Bucket.")
 	}
+
+	if tableName == "" {
+		log.Fatal("Could not retrieve TableName.")
+	}
+
 	return &Config{
 		Bucket:     bucket,
+		TableName: 	tableName,
 	}
 }

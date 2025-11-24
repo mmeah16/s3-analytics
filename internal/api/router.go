@@ -7,8 +7,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoutes(server *gin.Engine, uploadHandler *handlers.UploadHandler) {
+func RegisterRoutes(server *gin.Engine, uploadHandler *handlers.UploadHandler, filesHandler *handlers.FilesHandler) {
 	server.POST("/files", uploadHandler.UploadFile)
+	server.GET("/files", filesHandler.ReadFilesTable)
 }
 
 func health(context *gin.Context) {

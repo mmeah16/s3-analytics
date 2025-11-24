@@ -15,14 +15,18 @@ import (
 func main() {
 
 	config := config.LoadConfig()
-	context := context.Background()
+	ctx := context.Background()
 
-	s3Client := aws.NewS3Client(context, config.Bucket)
+	s3Client := aws.NewS3Client(ctx, config.Bucket)
 	s3Service := services.NewS3Service(s3Client)
 
+	dynamoDBClient := aws.NewDynamoDBClient(ctx, config.TableName)
+	dynamoDBService := services.NewDynamoDBService(dynamoDBClient)
+
 	uploadHandler := handlers.NewUploadHandler(s3Service)
+	filesHander := handlers.NewFilesHandler(dynamoDBService)
 
 	server := gin.Default()
-	api.RegisterRoutes(server, uploadHandler)
+	api.RegisterRoutes(server, uploadHandler, filesHander)
 	server.Run(":8080")
 }
