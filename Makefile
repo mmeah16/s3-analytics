@@ -1,2 +1,2 @@
-local:
+server:
 	go run ./cmd/api

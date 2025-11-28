@@ -9,7 +9,9 @@ import (
 
 func RegisterRoutes(server *gin.Engine, uploadHandler *handlers.UploadHandler, filesHandler *handlers.FilesHandler) {
 	server.POST("/files", uploadHandler.UploadFile)
-	server.GET("/files", filesHandler.ReadFilesTable)
+	server.GET("/files", filesHandler.GetAllFiles)
+	server.GET("/files/:id", filesHandler.GetSingleFile)
+	server.GET("/files/:id/status", filesHandler.GetFileStatus)
 }
 
 func health(context *gin.Context) {

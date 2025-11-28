@@ -46,6 +46,10 @@ func (h *UploadHandler) UploadFile(context *gin.Context) {
 	}
 
 	_, err = h.DynamoDBService.CreateItem(context, &metadata)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{"error": "Metadata record creation failed.", "detail": err.Error(),})
+		return
+	}
 
     context.JSON(http.StatusOK, gin.H{
         "key": key,
