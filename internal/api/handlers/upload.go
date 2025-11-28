@@ -38,11 +38,11 @@ func (h *UploadHandler) UploadFile(context *gin.Context) {
 	uuid := uuid.New().String()
 	// Create file metadata and put item into DynamoDB
 	metadata := services.FileMetadata{
-		ID:        uuid,
-		Filename:  file.Filename,
-		Size:      file.Size,
-		Status:    "uploaded",
-		CreatedAt: time.Now().UTC(),
+		ID:        		 uuid,
+		Filename:  		 file.Filename,
+		Size:      		 file.Size,
+		ProcessingState: "uploaded",
+		CreatedAt: 		 time.Now().UTC(),
 	}
 
 	_, err = h.DynamoDBService.CreateItem(context, &metadata)

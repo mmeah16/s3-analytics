@@ -18,11 +18,13 @@ type DynamoDBService struct {
 }
 
 type FileMetadata struct {
-    ID        string `dynamodbav:"id"`
-    Filename  string `dynamodbav:"filename"`
-    Size      int64  `dynamodbav:"size"`
-    Status    string `dynamodbav:"status"`// uploaded | processing | done
-    CreatedAt time.Time `dynamodbav:"createdAt"`
+    ID              string    `dynamodbav:"id"`
+    Filename        string    `dynamodbav:"filename"`
+    Size            int64     `dynamodbav:"size"`
+    ProcessingState string    `dynamodbav:"processingState"`
+    CreatedAt       time.Time `dynamodbav:"createdAt"`
+    Sha256          string    `dynamodbav:"sha256"`
+    ProcessedKey    string    `dynamodbav:"processedKey"`
 }
 
 func NewDynamoDBService(d *aws.DynamoDBClient) *DynamoDBService {

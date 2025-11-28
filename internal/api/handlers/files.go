@@ -61,16 +61,16 @@ func (h *FilesHandler) GetFileStatus(context *gin.Context) {
 		return
 	}
 
-    if file.Status != "done" {
+    if file.ProcessingState != "done" {
         context.JSON(http.StatusOK, gin.H{
-            "status": file.Status,
+            "status": file.ProcessingState,
             "result": "processing not completed yet",
         })
         return
     }
 
     context.JSON(http.StatusOK, gin.H{
-        "status": file.Status,
+        "status": file.ProcessingState,
         "result": "processed output would appear here",
     })
 } 

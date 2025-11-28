@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"mime/multipart"
-	"path/filepath"
 	"s3-analytics/internal/aws"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -32,7 +31,9 @@ func (s *S3Service) UploadFileToS3(ctx context.Context, fh *multipart.FileHeader
 
 	defer file.Close()
 
-	key := uuid.New().String() + filepath.Ext(fh.Filename)
+	id := uuid.New().String()
+	key := fmt.Sprintf("raw/%s-%s", id, fh.Filename)
+
 
 	_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket: &s.bucket,
