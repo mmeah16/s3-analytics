@@ -22,7 +22,7 @@ func NewS3Service(c *aws.S3Client) *S3Service {
 	}
 }
 
-func (s *S3Service) UploadFileToS3(ctx context.Context, fh *multipart.FileHeader) (string, string, error) {
+func (s *S3Service) UploadFileToS3(ctx context.Context, fh *multipart.FileHeader, traceId string) (string, string, error) {
 	file, err := fh.Open()
 
 	if err != nil {
@@ -39,6 +39,9 @@ func (s *S3Service) UploadFileToS3(ctx context.Context, fh *multipart.FileHeader
 		Bucket: &s.bucket,
 		Key: &key,
 		Body: file,
+		Metadata: map[string]string{
+			"trace_id" : traceId,
+		},
 	})
 
 	if err != nil {
