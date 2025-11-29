@@ -82,7 +82,7 @@ def lambda_handler(event, context):
         dynamodb.update_item(
             TableName=table_name,
             Key={"id": {"S": file_id}},
-            UpdateExpression="SET ProcessingState = :state, processedKey = :pk, sha256 = :sha",
+            UpdateExpression="SET processingState = :state, processedKey = :pk, sha256 = :sha",
             ExpressionAttributeValues={
                 ":state": {"S": "done"},
                 ":pk": {"S": processed_key},
@@ -114,7 +114,7 @@ def lambda_handler(event, context):
     dynamodb.update_item(
         TableName=table_name,
         Key={"id": {"S": file_id}},
-        UpdateExpression="SET ProcessingStatus = :status, ProcessedKey = :pk, Sha256 = :sha",
+        UpdateExpression="SET processingState = :status, processedKey = :pk, sha256 = :sha",
         ExpressionAttributeValues={
             ":status": {"S": "done"},
             ":pk": {"S": processed_key},
