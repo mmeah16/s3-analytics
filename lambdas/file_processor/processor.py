@@ -1,3 +1,4 @@
+print("INVOKING LAMBDA")
 """
 Lambda: File Metadata Processor
 -------------------------------
@@ -31,7 +32,7 @@ import os
 import mimetypes
 import hashlib
 import boto3
-from boto3.dynamodb.conditions import Key
+import re
 
 s3 = boto3.client("s3")
 dynamodb = boto3.client("dynamodb")
@@ -40,14 +41,15 @@ def lambda_handler(event, context):
     print("Received event:", json.dumps(event))
 
     # 1. Extract S3 metadata from EventBridge/S3 event
-    record = event["Records"][0]
-    bucket = record["s3"]["bucket"]["name"]
-    raw_key = record["s3"]["object"]["key"]
+    record = event["detail"]
+    bucket = record["bucket"]["name"]
+    raw_key = record["object"]["key"]
 
     # Example key: raw/<uuid>-filename.pdf
     filename = raw_key.split("/")[-1] # Extract <uuid>-filename.pdf
-    file_id = filename.split("-")[0]  # Extract uuid
-
+    match = re.match(r"^([0-9a-fA-F-]{36})-", filename)
+    file_id = match.group(1) if match else None
+    print(f"This is the file id: {file_id}")
     # 2. Download file to Lambda's ephermeral storage
     local_path = f"/tmp/{filename}"
     s3.download_file(bucket, raw_key, local_path)
@@ -62,6 +64,7 @@ def lambda_handler(event, context):
         sha256_hash.update(f.read())
     sha256 = sha256_hash.hexdigest()
 
+    table_name = os.environ["TABLE_NAME"]
     response = dynamodb.query(
         TableName=table_name,
         IndexName="Sha256Index",
@@ -108,10 +111,9 @@ def lambda_handler(event, context):
     )
 
     # 5. Update DynamoDB
-    table_name = os.environ["TABLE_NAME"]
     dynamodb.update_item(
         TableName=table_name,
-        Key={"ID": {"S": file_id}},
+        Key={"id": {"S": file_id}},
         UpdateExpression="SET ProcessingStatus = :status, ProcessedKey = :pk, Sha256 = :sha",
         ExpressionAttributeValues={
             ":status": {"S": "done"},
