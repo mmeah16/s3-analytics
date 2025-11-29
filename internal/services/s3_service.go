@@ -22,11 +22,11 @@ func NewS3Service(c *aws.S3Client) *S3Service {
 	}
 }
 
-func (s *S3Service) UploadFileToS3(ctx context.Context, fh *multipart.FileHeader) (string, error) {
+func (s *S3Service) UploadFileToS3(ctx context.Context, fh *multipart.FileHeader) (string, string, error) {
 	file, err := fh.Open()
 
 	if err != nil {
-		return "", fmt.Errorf("failed to open uploaded file: %w", err)
+		return "", "", fmt.Errorf("failed to open uploaded file: %w", err)
 	}
 
 	defer file.Close()
@@ -42,8 +42,8 @@ func (s *S3Service) UploadFileToS3(ctx context.Context, fh *multipart.FileHeader
 	})
 
 	if err != nil {
-		return "", fmt.Errorf("s3 upload failed: %w", err)
+		return "", "", fmt.Errorf("s3 upload failed: %w", err)
 	}
 
-	return key, nil
+	return key, id, nil
 }

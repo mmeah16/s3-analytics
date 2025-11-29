@@ -21,7 +21,7 @@ func LoadConfig() *Config {
 		log.Fatalf("Could not retrieve environment variables: %w.", err)
 	}
 
-	bucket := os.Getenv("BUCKET")
+	bucket := os.Getenv("BUCKET_NAME")
 	tableName := os.Getenv("TABLE_NAME")
 
 	if bucket == "" {

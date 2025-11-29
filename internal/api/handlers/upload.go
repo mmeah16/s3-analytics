@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 type UploadHandler struct {
@@ -29,16 +28,15 @@ func (h *UploadHandler) UploadFile(context *gin.Context) {
 		return
 	}
 
-	key, err := h.S3Service.UploadFileToS3(context, file)
+	key, id, err := h.S3Service.UploadFileToS3(context, file)
 
 	if err != nil {
 		context.JSON(http.StatusBadRequest, gin.H{"error": "Upload failed.", "detail": err.Error(),})
 		return
 	}
-	uuid := uuid.New().String()
 	// Create file metadata and put item into DynamoDB
 	metadata := services.FileMetadata{
-		ID:        		 uuid,
+		ID:        		 id,
 		Filename:  		 file.Filename,
 		Size:      		 file.Size,
 		ProcessingState: "uploaded",

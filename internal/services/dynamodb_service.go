@@ -23,8 +23,8 @@ type FileMetadata struct {
     Size            int64     `dynamodbav:"size"`
     ProcessingState string    `dynamodbav:"processingState"`
     CreatedAt       time.Time `dynamodbav:"createdAt"`
-    Sha256          string    `dynamodbav:"sha256"`
-    ProcessedKey    string    `dynamodbav:"processedKey"`
+    Sha256          string    `dynamodbav:"sha256,omitempty"`
+    ProcessedKey    string    `dynamodbav:"processedKey,omitempty"`
 }
 
 func NewDynamoDBService(d *aws.DynamoDBClient) *DynamoDBService {
