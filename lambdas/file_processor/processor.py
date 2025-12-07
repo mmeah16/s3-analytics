@@ -33,26 +33,45 @@ import mimetypes
 import hashlib
 import boto3
 import re
+import logging
+import time
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+def log_json(message, **fields):
+    logger.info(json.dumps({"message": message, **fields}))
 
 s3 = boto3.client("s3")
 dynamodb = boto3.client("dynamodb")
 
 def lambda_handler(event, context):
-    print("Received event:", json.dumps(event))
+    start = time.Time()
 
     # 1. Extract S3 metadata from EventBridge/S3 event
     record = event["detail"]
     bucket = record["bucket"]["name"]
     raw_key = record["object"]["key"]
 
+    head = s3.head_object(Bucket=bucket, Key=raw_key)
+    print(head)
+    metadata = head.get("Metadata", {})
+
+    trace_id = metadata.get("trace_id")
+
+    def log(msg, **fields):
+        log_json(msg, component="processor", trace_id=trace_id, key=raw_key, bucket=bucket, **fields)
+
+    log("event_received", event=event)
     # Example key: raw/<uuid>-filename.pdf
     filename = raw_key.split("/")[-1] # Extract <uuid>-filename.pdf
     match = re.match(r"^([0-9a-fA-F-]{36})-", filename)
     file_id = match.group(1) if match else None
-    print(f"This is the file id: {file_id}")
+    log("file_id_parsed", file_id=file_id)
     # 2. Download file to Lambda's ephermeral storage
     local_path = f"/tmp/{filename}"
     s3.download_file(bucket, raw_key, local_path)
+    log("file_downloaded", local_path=local_path)
 
     # 3. Processing: extract basic metadata
     size_bytes = os.path.getsize(local_path)
@@ -63,7 +82,7 @@ def lambda_handler(event, context):
     with open(local_path, "rb") as f:
         sha256_hash.update(f.read())
     sha256 = sha256_hash.hexdigest()
-
+    log("computed_sha256", sha256=sha256)
     table_name = os.environ["TABLE_NAME"]
     response = dynamodb.query(
         TableName=table_name,
@@ -78,7 +97,7 @@ def lambda_handler(event, context):
     if response["Count"] > 0:
         existing_item = response["Items"][0]
         processed_key = existing_item.get("processedKey", {}).get("S", None)
-
+        log("dedupe_hit", processed_key=processed_key)
         dynamodb.update_item(
             TableName=table_name,
             Key={"id": {"S": file_id}},
@@ -109,7 +128,7 @@ def lambda_handler(event, context):
         Body=json.dumps(processed_output),
         ContentType="application/json"
     )
-
+    log("uploaded_processed_file", processed_key=processed_key)
     # 5. Update DynamoDB
     dynamodb.update_item(
         TableName=table_name,
@@ -121,5 +140,6 @@ def lambda_handler(event, context):
             ":sha": {"S": sha256}
         }
     )
-
+    log("dynamodb_update_complete")
+    log("lambda_completed", latency_ms = int((time.Time()-start)*1000))
     return {"statusCode": 200, "body": "OK"}
