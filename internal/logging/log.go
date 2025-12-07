@@ -17,6 +17,6 @@ func NewStructuredLogger() *StructuredLogger {
 	}
 }
 
-func  (sl *StructuredLogger) WithTrace(traceID string) *slog.Logger {
-	return sl.base.With("trace_id", traceID)
+func  (sl *StructuredLogger) WithTrace(traceID, component, method, endpoint string) *slog.Logger {
+	return sl.base.With("trace_id", traceID, "component", component, "method", method, "endpoint", endpoint)
 }

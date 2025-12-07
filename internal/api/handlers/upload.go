@@ -25,8 +25,9 @@ func NewUploadHandler(s3Service *services.S3Service, dynamoDBService *services.D
 }
 
 func (h *UploadHandler) UploadFile(context *gin.Context) {
+	start := time.Now()
 	traceId := uuid.NewString()
-	log := h.Logger.WithTrace(traceId)
+	log := h.Logger.WithTrace(traceId, "api", "POST", "/files")
 	file, err := context.FormFile("file")
 
 	if err != nil {
@@ -58,7 +59,9 @@ func (h *UploadHandler) UploadFile(context *gin.Context) {
 		return
 	}
 
-	log.Info("Upload successful.")
+	log.Info("Upload successful.",
+    	"latency_ms", time.Since(start).Milliseconds(),
+	)
 
     context.JSON(http.StatusOK, gin.H{
         "key": key,

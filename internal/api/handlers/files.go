@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"s3-analytics/internal/logging"
 	"s3-analytics/internal/services"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -23,9 +24,9 @@ func NewFilesHandler(service *services.DynamoDBService) *FilesHandler {
 }
 
 func (h *FilesHandler) GetAllFiles(context *gin.Context) {
-
+	start := time.Now()
 	traceId := uuid.NewString()
-	log := h.Logger.WithTrace(traceId)
+	log := h.Logger.WithTrace(traceId, "api", "GET", "/files")
 
 	data, err := h.Service.GetAllItems(context)
 
@@ -35,7 +36,9 @@ func (h *FilesHandler) GetAllFiles(context *gin.Context) {
 		return
 	}
 
-	log.Info("All file metadata retrieved successfully.")
+	log.Info("All file metadata retrieved successfully",
+    	"latency_ms", time.Since(start).Milliseconds(),
+	)	
 	context.JSON(http.StatusOK, gin.H{
         "data": data,
         "message": "All file metadata retrieved successfully.",
@@ -43,8 +46,9 @@ func (h *FilesHandler) GetAllFiles(context *gin.Context) {
 } 
 
 func (h *FilesHandler) GetSingleFile(context *gin.Context) {
+	start := time.Now()
 	traceId := uuid.NewString()
-	log := h.Logger.WithTrace(traceId)
+	log := h.Logger.WithTrace(traceId, "api", "GET", "/files/:id")
 
 	fileId := context.Param("id")
 
@@ -56,8 +60,9 @@ func (h *FilesHandler) GetSingleFile(context *gin.Context) {
 		return
 	}
 
-	log.Info("File metadata retrieved successfully.")
-
+	log.Info("File metadata retrieved successfully",
+    	"latency_ms", time.Since(start).Milliseconds(),
+	)	
 	context.JSON(http.StatusOK, gin.H{
         "data": data,
         "message": fmt.Sprintf("File metadata %s retrieved successfully.", fileId),
@@ -65,8 +70,9 @@ func (h *FilesHandler) GetSingleFile(context *gin.Context) {
 } 
 
 func (h *FilesHandler) GetFileStatus(context *gin.Context) {
+	start := time.Now()
 	traceId := uuid.NewString()
-	log := h.Logger.WithTrace(traceId)
+	log := h.Logger.WithTrace(traceId, "api", "GET", "/files/:id/status")
 
 	fileId := context.Param("id")
 
@@ -87,7 +93,9 @@ func (h *FilesHandler) GetFileStatus(context *gin.Context) {
         return
     }
 
-	log.Info("File processing completed.")
+	log.Info("File processing completed.",
+    	"latency_ms", time.Since(start).Milliseconds(),
+	)	
     context.JSON(http.StatusOK, gin.H{
         "status": file.ProcessingState,
         "result": "File processing completed.",
