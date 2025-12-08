@@ -23,8 +23,11 @@ func main() {
 	dynamoDBClient := aws.NewDynamoDBClient(ctx, config.TableName)
 	dynamoDBService := services.NewDynamoDBService(dynamoDBClient)
 
-	uploadHandler := handlers.NewUploadHandler(s3Service, dynamoDBService)
-	filesHander := handlers.NewFilesHandler(dynamoDBService)
+	cloudWatchClient := aws.NewCloudWatchClient(ctx)
+	cloudWatchService := services.NewCloudWatchService(cloudWatchClient)
+
+	uploadHandler := handlers.NewUploadHandler(s3Service, dynamoDBService, cloudWatchService)
+	filesHander := handlers.NewFilesHandler(dynamoDBService, cloudWatchService)
 
 	server := gin.Default()
 	api.RegisterRoutes(server, uploadHandler, filesHander)
