@@ -1,4 +1,3 @@
-print("INVOKING LAMBDA")
 """
 Lambda: File Metadata Processor
 -------------------------------
@@ -45,6 +44,29 @@ def log_json(message, **fields):
 s3 = boto3.client("s3")
 dynamodb = boto3.client("dynamodb")
 
+def emit_metric(name, value, unit="Count", dimensions=None):
+    if dimensions is None:
+        dimensions = {"ProcessorName": "processor"}
+
+    metric_blob = {
+        "_aws": {
+            "Timestamp": int(time.time() * 1000),
+            "CloudWatchMetrics": [
+                {
+                    "Namespace": "FilePipeline/Processor",
+                    "Dimensions": [list(dimensions.keys())],
+                    "Metrics": [
+                        {"Name": name, "Unit": unit}
+                    ],
+                }
+            ],
+        },
+        name: value,
+        **dimensions
+    }
+
+    print(json.dumps(metric_blob))
+
 def lambda_handler(event, context):
     start = time.Time()
 
@@ -70,17 +92,28 @@ def lambda_handler(event, context):
     log("file_id_parsed", file_id=file_id)
     # 2. Download file to Lambda's ephermeral storage
     local_path = f"/tmp/{filename}"
-    s3.download_file(bucket, raw_key, local_path)
-    log("file_downloaded", local_path=local_path)
+    try:
+        s3.download_file(bucket, raw_key, local_path)
+        log("file_downloaded", local_path=local_path)
+    except Exception as e:
+        log("file_download_failed", error=str(e))
+        emit_metric("FileDownloadFailures", 1)
+        raise
 
     # 3. Processing: extract basic metadata
     size_bytes = os.path.getsize(local_path)
     mime_type, _ = mimetypes.guess_type(filename)
 
     # 3. Generate sha256, if sha256 hash exists in DynamoDB skip processing to avoid deduplication
-    sha256_hash = hashlib.sha256()
-    with open(local_path, "rb") as f:
-        sha256_hash.update(f.read())
+    try:
+        sha256_hash = hashlib.sha256()
+        with open(local_path, "rb") as f:
+            sha256_hash.update(f.read())
+    except Exception as e:
+        log("file_hash_failed", error=str(e))
+        emit_metric("FileHashFailures", 1)
+        raise
+
     sha256 = sha256_hash.hexdigest()
     log("computed_sha256", sha256=sha256)
     table_name = os.environ["TABLE_NAME"]
@@ -98,6 +131,7 @@ def lambda_handler(event, context):
         existing_item = response["Items"][0]
         processed_key = existing_item.get("processedKey", {}).get("S", None)
         log("dedupe_hit", processed_key=processed_key)
+        emit_metric("DedupeHits", 1)
         dynamodb.update_item(
             TableName=table_name,
             Key={"id": {"S": file_id}},
@@ -130,16 +164,26 @@ def lambda_handler(event, context):
     )
     log("uploaded_processed_file", processed_key=processed_key)
     # 5. Update DynamoDB
-    dynamodb.update_item(
-        TableName=table_name,
-        Key={"id": {"S": file_id}},
-        UpdateExpression="SET processingState = :status, processedKey = :pk, sha256 = :sha",
-        ExpressionAttributeValues={
-            ":status": {"S": "done"},
-            ":pk": {"S": processed_key},
-            ":sha": {"S": sha256}
-        }
-    )
-    log("dynamodb_update_complete")
-    log("lambda_completed", latency_ms = int((time.Time()-start)*1000))
+    try:
+        dynamodb.update_item(
+            TableName=table_name,
+            Key={"id": {"S": file_id}},
+            UpdateExpression="SET processingState = :status, processedKey = :pk, sha256 = :sha",
+            ExpressionAttributeValues={
+                ":status": {"S": "done"},
+                ":pk": {"S": processed_key},
+                ":sha": {"S": sha256}
+            }
+        )
+        log("dynamodb_update_complete")
+    except Exception as e:
+        log("ddb_update_failed", error=str(e))
+        emit_metric("DynamoDBUpdateFailures", 1)
+        raise
+
+    latency_ms = int((time.time() - start) * 1000)
+    log("lambda_completed", latency_ms = latency_ms)
+   
+    emit_metric("ProcessingLatencyMs", latency_ms, unit="Milliseconds")
+    emit_metric("FilesProcessed", 1)
     return {"statusCode": 200, "body": "OK"}
